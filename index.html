@@ -7,19 +7,33 @@
 <meta name="description" content="Газар, үйлчилгээний бодит үнэлгээ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ue.css">
+<link rel="stylesheet" href="assets/ue.css?v=4">
 </head>
 <body>
-<main class="wrap" style="padding-top:40px">
-  <h1 style="font-size:32px;font-weight:800">Үнэлэмж</h1>
-  <p class="mute" style="margin-top:6px">Газар, үйлчилгээний бодит үнэлгээ. Удахгүй олон газартай болно.</p>
-  <div class="blk" id="places" style="display:grid;gap:10px"></div>
+<main class="wrap" style="padding-top:calc(28px + env(safe-area-inset-top,0px))">
+  <h1 style="font-size:30px;font-weight:800">★ Үнэлэмж</h1>
+  <p class="mute" style="margin-top:6px;font-weight:600">Газар, үйлчилгээний бодит үнэлгээ. Сэтгэгдлийг зочид өөрсдөө бичдэг.</p>
+  <div class="blk" id="places" style="display:grid;gap:28px"></div>
 </main>
-<script src="assets/config.js"></script>
+<script src="assets/config.js?v=4"></script>
+<script src="assets/api.js?v=4"></script>
 <script>
-  const esc=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  document.getElementById("places").innerHTML=Object.entries(window.UE_PLACES||{}).map(([s,p])=>
-    `<a class="card" href="${esc(s)}/" style="text-decoration:none;color:inherit"><b style="font-size:17px">${esc(p.name)}</b><span class="mute">${esc([p.category,p.location].filter(Boolean).join(" · "))}</span></a>`).join("");
+(() => {
+  const { esc } = UE, el = document.getElementById("places");
+  const places = Object.entries(window.UE_PLACES || {});
+  el.innerHTML = places.map(([s, p]) => `<a class="pcard" href="${esc(s)}/">
+    ${p.photos && p.photos[0] ? `<img src="${esc(s)}/${esc(p.photos[0])}" alt="${esc(p.name)}">` : `<span class="nophoto">${esc(p.name)}</span>`}
+    <span><b>${esc(p.name)}</b><span class="ln" data-r="${esc(s)}"><span>${esc([p.category, p.location].filter(Boolean).join(" · "))}</span></span></span></a>`).join("")
+    || `<p class="empty">Одоогоор газар алга.</p>`;
+  if (!UE.ready) return;
+  places.forEach(async ([s]) => {
+    try {
+      const d = await UE.rpc("ue_place", { p_place: s });
+      const ln = el.querySelector(`[data-r="${CSS.escape(s)}"]`);
+      if (d && d.count && ln) ln.insertAdjacentHTML("afterbegin", `<span class="r"><span class="st">★</span> ${Number(d.avg).toFixed(1)}</span><span>(${d.count})</span><span>·</span>`);
+    } catch (e) {}
+  });
+})();
 </script>
 </body>
 </html>

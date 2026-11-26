@@ -112,3 +112,16 @@ textarea.inp{min-height:140px;resize:vertical}
 .row2{display:flex;gap:8px;flex-wrap:wrap}
 .row2 .btn{width:auto;min-height:40px;padding:8px 14px;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:640px;margin:0 auto;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px)}
+.topbar a{color:var(--ink);text-decoration:none;font-weight:700;font-size:15px;min-height:40px;display:inline-flex;align-items:center}
+.topbar .home{color:var(--brand)}
+.topbar .brand{font-weight:800}
+
+/* home cards */
+.pcard{display:grid;gap:10px;text-decoration:none;color:inherit}
+.pcard img,.pcard .nophoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);max-width:100%}
+.pcard b{font-size:18px;font-weight:800}
+.pcard .ln{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--mute);font-weight:600;font-size:14px}
+.pcard .ln .r{color:var(--ink);font-weight:800}
