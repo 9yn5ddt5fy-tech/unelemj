@@ -43,12 +43,12 @@
       <div class="chips">${d.count ? `<span class="chip"><span class="st">★</span> <b class="num">${fmt(d.avg)}</b> · ${d.count} үнэлгээ</span>` : ""}${top.since ? `<span class="chip">${esc(top.since)} оноос</span>` : ""}</div>
       <a class="btn" href="${esc(top.s)}/">Үзэх, үнэлгээ өгөх</a>` : `<h1>Үнэлэмж</h1><p class="sub">Газар, үйлчилгээний бодит үнэлгээ</p>`;
     const regions = [...new Set(PL.map(p => p.region).filter(Boolean))];
-    const near = ranked(PL.filter(p => !region || p.region === region)).concat(PL.filter(p => (!region || p.region === region) && !st(p).count));
+    const near = ranked(PL.filter(p => !region || p.region === region)).concat(PL.filter(p => (!region || p.region === region) && !st(p).count && !p.db));
     const tagCounts = {};
     PL.forEach(p => Object.entries(st(p).tags || {}).forEach(([t, n]) => { if (!NEG.includes(t)) tagCounts[t] = (tagCounts[t] || 0) + n; }));
     const themes = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
     $("v-home").innerHTML = `
-      <div class="cats">${Object.keys(CATS).map(c => { const n = PL.filter(p => p.category === c).length;
+      <div class="cats">${Object.keys(CATS).map(c => { const n = PL.filter(p => p.category === c && (!p.db || st(p).count)).length;
         return `<a class="cat${n ? "" : " off"}" href="#search" data-cat="${esc(c)}"><i>${icon(c)}</i><span>${esc(c)}</span><small>${n ? n + " газар" : "Удахгүй"}</small></a>`; }).join("")}</div>
       <a class="card adcard" href="#biz"><span><span class="label">Үнэлэмжийн зар</span><b>Таны бизнес энд харагдах уу?</b><span class="ln">Газраа үнэгүй бүртгүүлж, зочдын сэтгэгдэлд хариулаарай.</span></span><span class="arrow">→</span></a>
       ${sec("Шилдэг үнэлгээтэй", "Зочдын үнэлгээгээр", `<a class="more" href="#top">Бүх эрэмбэ</a>`, ranked(PL).length ? `<div class="shelf">${ranked(PL).slice(0, 8).map(bigCard).join("")}</div>` : empty(loaded ? "Одоогоор үнэлгээ алга." : "Ачааллаж байна…"))}
