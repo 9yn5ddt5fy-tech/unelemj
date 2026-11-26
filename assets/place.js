@@ -15,18 +15,23 @@
   function renderHead() {
     document.title = (info.name || slug) + " · Үнэлэмж";
     const ph = info.photos || [];
+    if (ph[0]) $("herobg").style.backgroundImage = `url("${ph[0].replace(/"/g, "")}")`;
     $("gal").innerHTML = ph.length
-      ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>`
-      : `<div class="nophoto">${esc(info.name || "")}<br>Зураг удахгүй нэмэгдэнэ</div>`;
+      ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>` : "";
+    $("cat").textContent = info.category || "";
     $("name").textContent = info.name || slug;
-    $("sub").textContent = [info.category, info.location].filter(Boolean).join(" · ");
+    $("sub").textContent = info.location || "";
     $("about").textContent = info.about || "";
-    $("about").hidden = !info.about;
+    $("aboutc").hidden = !info.about;
+    chips();
+  }
+  function chips() {
     const f = [];
-    if (info.since) f.push(`<span class="fact">${esc(info.since)} оноос</span>`);
-    if (info.season) f.push(`<span class="fact">Ажиллах улирал: ${esc(info.season)}</span>`);
-    if (info.phone) f.push(`<button class="fact" id="phone">Утас: ${esc(info.phone)}</button>`);
-    $("facts").innerHTML = f.join("");
+    if (place && place.count) f.push(`<span class="chip"><span class="st">★</span> <b class="num">${fmt(place.avg)}</b> · <span class="num">${place.count}</span> үнэлгээ</span>`);
+    if (info.since) f.push(`<span class="chip">${esc(info.since)} оноос</span>`);
+    if (info.season) f.push(`<span class="chip">${esc(info.season)}</span>`);
+    if (info.phone) f.push(`<button class="chip" id="phone">${esc(info.phone)}</button>`);
+    $("chips").innerHTML = f.join("");
     const pb = $("phone");
     if (pb) pb.onclick = () => { try { navigator.clipboard.writeText(info.phone).then(() => toast("Утасны дугаар хуулагдлаа"), () => {}); } catch (e) {} };
   }
@@ -48,6 +53,7 @@
     $("sum").innerHTML = `<div class="sum"><div class="big"><b class="num">${fmt(place.avg)}</b><span class="st">${stars(place.avg)}</span><br><small class="num">${n} үнэлгээ</small></div>
       <div class="dist">${[5, 4, 3, 2, 1].map(s => `<div class="dr"><span>${s}</span><span class="bar"><i style="width:${(dist[s] || 0) / max * 100}%"></i></span><span class="num">${dist[s] || 0}</span></div>`).join("")}</div></div>
       ${crit.length ? `<div class="crit">${crit.map(([l, v]) => `<div class="cr"><span>${l}</span><span class="bar"><i style="width:${v / 5 * 100}%"></i></span><em class="num">${fmt(v)}</em></div>`).join("")}</div>` : ""}`;
+    chips();
     const tags = Object.entries(place.tags || {});
     $("tagblk").hidden = !tags.length;
     $("tags").innerHTML = tags.map(([t, c]) => `<span class="tg${NEG.includes(t) ? " neg" : ""}">${esc(t)} <b class="num">${c}</b></span>`).join("");
@@ -55,15 +61,16 @@
 
   function revHtml(r) {
     const nm = r.author || "Зочин";
-    return `<div class="rev"><div class="rh"><span class="av">${esc(nm[0])}</span><span class="w">${esc(nm)}<small>${date(r.created_at)}</small></span><span class="st">${stars(r.rating)}</span></div>
+    return `<div class="rv"><div class="who"><span class="av">${esc(nm[0])}</span><span><b>${esc(nm)}</b><small>${date(r.created_at)}</small></span></div>
+      <div class="card"><span class="stars">${stars(r.rating)}</span>
       ${r.body ? `<p>${esc(r.body)}</p>` : ""}
       ${r.tags && r.tags.length ? `<div class="tags">${r.tags.map(t => `<span class="tg${NEG.includes(t) ? " neg" : ""}">${esc(t)}</span>`).join("")}</div>` : ""}
-      ${r.reply ? `<div class="reply"><b>Эзэмшигчийн хариу</b>${esc(r.reply)}</div>` : ""}</div>`;
+      ${r.reply ? `<div class="reply"><b>Эзэмшигчийн хариу</b>${esc(r.reply)}</div>` : ""}</div></div>`;
   }
   async function loadReviews(more) {
     const rows = await UE.rpc("ue_reviews", { p_place: slug, p_before: more ? last : null, p_limit: 20 });
     if (!more) $("revs").innerHTML = "";
-    if (!rows.length && !more) $("revs").innerHTML = `<p class="empty">Сэтгэгдэл одоогоор алга.</p>`;
+    if (!rows.length && !more) $("revs").innerHTML = `<div class="card"><p class="empty">Сэтгэгдэл одоогоор алга. Анхны сэтгэгдлийг та бичээрэй.</p></div>`;
     $("revs").insertAdjacentHTML("beforeend", rows.map(revHtml).join(""));
     if (rows.length) last = rows[rows.length - 1].id;
     $("more").hidden = rows.length < 20;

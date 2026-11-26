@@ -3,35 +3,65 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
 <title>Үнэлэмж</title>
 <meta name="description" content="Газар, үйлчилгээний бодит үнэлгээ">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/ue.css?v=4">
+<link rel="stylesheet" href="assets/ue.css?v=5">
 </head>
 <body>
-<main class="wrap" style="padding-top:calc(28px + env(safe-area-inset-top,0px))">
-  <h1 style="font-size:30px;font-weight:800">★ Үнэлэмж</h1>
-  <p class="mute" style="margin-top:6px;font-weight:600">Газар, үйлчилгээний бодит үнэлгээ. Сэтгэгдлийг зочид өөрсдөө бичдэг.</p>
-  <div class="blk" id="places" style="display:grid;gap:28px"></div>
+<header class="hero">
+  <div class="hero-bg" id="herobg"></div>
+  <nav class="topbar"><a class="logo" href="./"><i>★</i>Үнэлэмж</a><span></span></nav>
+  <div class="hero-in" id="feat"></div>
+</header>
+<main class="page" style="margin-top:0;padding-top:20px">
+  <h2 class="sec-t">Газрууд</h2>
+  <div class="revs" id="places"></div>
+  <h2 class="sec-t" id="ft" hidden>Сүүлийн сэтгэгдлүүд</h2>
+  <div class="revs feed" id="feed"></div>
+  <p class="note">Үнэлэмж · газар, үйлчилгээний бодит үнэлгээ. Сэтгэгдлийг зочид өөрсдөө бичдэг.</p>
 </main>
-<script src="assets/config.js?v=4"></script>
-<script src="assets/api.js?v=4"></script>
+<script src="assets/config.js?v=5"></script>
+<script src="assets/api.js?v=5"></script>
 <script>
 (() => {
-  const { esc } = UE, el = document.getElementById("places");
+  const { esc, date } = UE, $ = id => document.getElementById(id);
   const places = Object.entries(window.UE_PLACES || {});
-  el.innerHTML = places.map(([s, p]) => `<a class="pcard" href="${esc(s)}/">
-    ${p.photos && p.photos[0] ? `<img src="${esc(s)}/${esc(p.photos[0])}" alt="${esc(p.name)}">` : `<span class="nophoto">${esc(p.name)}</span>`}
-    <span><b>${esc(p.name)}</b><span class="ln" data-r="${esc(s)}"><span>${esc([p.category, p.location].filter(Boolean).join(" · "))}</span></span></span></a>`).join("")
-    || `<p class="empty">Одоогоор газар алга.</p>`;
+  const img = (s, p) => p.photos && p.photos[0] ? `${s}/${p.photos[0]}` : "";
+  const stats = {};
+
+  function feature() {
+    const [s, p] = places[0] || [];
+    if (!s) return;
+    if (img(s, p)) $("herobg").style.backgroundImage = `url("${img(s, p).replace(/"/g, "")}")`;
+    const d = stats[s];
+    $("feat").innerHTML = `<span class="label">Онцлох · ${esc(p.category || "")}</span><h1>${esc(p.name)}</h1><p class="sub">${esc(p.location || "")}</p>
+      <div class="chips">${d && d.count ? `<span class="chip"><span class="st">★</span> <b class="num">${Number(d.avg).toFixed(1)}</b> · <span class="num">${d.count}</span> үнэлгээ</span>` : ""}${p.since ? `<span class="chip">${esc(p.since)} оноос</span>` : ""}</div>
+      <a class="btn" href="${esc(s)}/" style="max-width:360px">Үзэх, үнэлгээ өгөх</a>`;
+  }
+  function list() {
+    $("places").innerHTML = places.map(([s, p]) => { const d = stats[s];
+      return `<div class="rv"><div class="who"><span class="av">${esc(p.name[0])}</span><span><b>${esc(p.location || "")}</b><small>${p.since ? esc(p.since) + " оноос" : ""}</small></span></div>
+      <a class="card pc" href="${esc(s)}/"><span><span class="dot">${esc(p.category || "")}</span><b>${esc(p.name)}</b>
+      <span class="ln">${d && d.count ? `<span class="r"><span class="st">★</span> ${Number(d.avg).toFixed(1)}</span> · ${d.count} үнэлгээ` : "Анхны үнэлгээг та өгөөрэй"}</span></span>
+      ${img(s, p) ? `<img src="${esc(img(s, p))}" alt="">` : `<span class="ph"></span>`}</a></div>`; }).join("") || `<div class="card"><p class="empty">Одоогоор газар алга.</p></div>`;
+  }
+  feature(); list();
   if (!UE.ready) return;
-  places.forEach(async ([s]) => {
+  Promise.all(places.map(async ([s, p]) => {
     try {
-      const d = await UE.rpc("ue_place", { p_place: s });
-      const ln = el.querySelector(`[data-r="${CSS.escape(s)}"]`);
-      if (d && d.count && ln) ln.insertAdjacentHTML("afterbegin", `<span class="r"><span class="st">★</span> ${Number(d.avg).toFixed(1)}</span><span>(${d.count})</span><span>·</span>`);
-    } catch (e) {}
+      stats[s] = await UE.rpc("ue_place", { p_place: s });
+      const rows = await UE.rpc("ue_reviews", { p_place: s, p_limit: 5 });
+      return rows.filter(r => r.body).map(r => ({ r, s, p }));
+    } catch (e) { return []; }
+  })).then(all => {
+    feature(); list();
+    const items = all.flat().sort((a, b) => b.r.created_at.localeCompare(a.r.created_at)).slice(0, 6);
+    $("ft").hidden = !items.length;
+    $("feed").innerHTML = items.map(({ r, s, p }) => { const nm = r.author || "Зочин";
+      return `<div class="rv"><div class="who"><span class="av">${esc(nm[0])}</span><span><b>${esc(nm)}</b><small>${date(r.created_at)}</small></span></div>
+      <a class="card" href="${esc(s)}/"><span class="t"><span class="dot">${esc(p.name)}</span><span class="st">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span><p>${esc(r.body)}</p></span>
+      ${img(s, p) ? `<img src="${esc(img(s, p))}" alt="">` : ""}</a></div>`; }).join("");
   });
 })();
 </script>
