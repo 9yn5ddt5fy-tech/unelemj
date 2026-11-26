@@ -23,6 +23,7 @@
     $("about").textContent = info.about || "";
     $("about").hidden = !info.about;
     const f = [];
+    if (info.since) f.push(`<span class="fact">${esc(info.since)} оноос</span>`);
     if (info.season) f.push(`<span class="fact">Ажиллах улирал: ${esc(info.season)}</span>`);
     if (info.phone) f.push(`<button class="fact" id="phone">Утас: ${esc(info.phone)}</button>`);
     $("facts").innerHTML = f.join("");

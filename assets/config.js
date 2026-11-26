@@ -11,11 +11,12 @@ window.UE_API = {
 window.UE_PLACES = {
   "usukh-ugii": {
     name: "Өсөх Өгий",
-    category: "Амралтын газар",
+    category: "Жуулчны бааз",
     location: "Өгий нуур",
     about: "",          // 1–3 sentences from the owners
+    since: "2013",      // year opened
     season: "",         // e.g. "6/1 – 9/15"
     phone: "",          // shown as text with a copy button
-    photos: []          // e.g. ["photos/1.jpg", "photos/2.jpg"]
+    photos: ["photos/1.jpg", "photos/2.jpg", "photos/3.jpg", "photos/4.jpg"]
   }
 };
