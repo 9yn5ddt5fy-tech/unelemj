@@ -1,0 +1,21 @@
+# Supabase pauses a free project after a week with no requests. Usukh Ugii is
+# seasonal, so the review page can go quiet for months; this daily call keeps
+# the database awake. Set the repository variables SUPABASE_URL and SUPABASE_KEY
+# (Settings → Secrets and variables → Actions → Variables) to the same values as
+# assets/config.js.
+name: keep database awake
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the public summary function
+        run: |
+          curl -fsS -X POST "${{ vars.SUPABASE_URL }}/rest/v1/rpc/ue_place" \
+            -H "apikey: ${{ vars.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ vars.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"p_place":"usukh-ugii"}' > /dev/null

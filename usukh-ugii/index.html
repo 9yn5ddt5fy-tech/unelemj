@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Usukh Ugii · Үнэлэмж</title>
+<meta name="description" content="Usukh Ugii амралтын газрын зочдын үнэлгээ, сэтгэгдэл">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/ue.css">
+</head>
+<body data-place="usukh-ugii">
+<main class="wrap" style="padding-top:16px">
+  <div id="gal"></div>
+  <section class="head">
+    <h1 id="name"></h1>
+    <p class="sub" id="sub"></p>
+    <p class="about" id="about" hidden></p>
+    <div class="facts" id="facts"></div>
+    <button class="btn cta" id="open">★ Үнэлгээ өгөх</button>
+  </section>
+  <section class="blk"><h2>Үнэлгээ</h2><div id="sum"><p class="empty">Ачааллаж байна…</p></div></section>
+  <section class="blk" id="tagblk" hidden><h2>Зочид юуг онцолсон бэ</h2><div class="tags" id="tags"></div></section>
+  <section class="blk"><h2>Сэтгэгдэл</h2><div id="revs"></div><button class="btn ghost" id="more" hidden style="margin-top:12px">Цааш үзэх</button></section>
+  <p class="note">Үнэлэмж · сэтгэгдлийг зочид өөрсдөө бичдэг. Эзэмшигч хариулж болох ч засаж, устгаж чадахгүй.</p>
+</main>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-label="Үнэлгээ өгөх">
+  <div class="in">
+    <div class="fhead"><button class="x" id="fx" aria-label="Хаах">×</button><div class="prog"><i id="fprog"></i></div></div>
+    <div class="q" id="fq"></div>
+    <p class="err" id="ferr" role="alert"></p>
+    <button class="btn" id="fnext">Үргэлжлүүлэх</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="../assets/config.js"></script>
+<script src="../assets/api.js"></script>
+<script src="../assets/place.js"></script>
+</body>
+</html>

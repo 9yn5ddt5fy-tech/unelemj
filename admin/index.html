@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Эзэмшигчийн хэсэг · Үнэлэмж</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/ue.css">
+</head>
+<body>
+<main class="wrap" style="padding-top:24px">
+  <h1 style="font-size:26px;font-weight:800">Эзэмшигчийн хэсэг</h1>
+  <p class="mute" style="margin-top:4px">Сэтгэгдэлд хариулах, зүй бус сэтгэгдлийг нуух</p>
+
+  <form id="login" class="blk" style="display:grid;gap:12px">
+    <label class="f">Газар<select class="inp" id="place"></select></label>
+    <label class="f">Эзэмшигчийн түлхүүр<input class="inp" id="key" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="lerr" role="alert"></p>
+    <button class="btn" type="submit">Нэвтрэх</button>
+  </form>
+
+  <section id="panel" hidden>
+    <div class="blk" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <span id="stat" class="mute" style="font-weight:600"></span>
+      <button class="btn ghost" id="out" style="width:auto;min-height:40px;padding:8px 14px">Гарах</button>
+    </div>
+    <div id="list" style="display:grid;gap:12px;margin-top:16px"></div>
+  </section>
+  <p class="note">Сэтгэгдлийг засах, устгах боломжгүй. Нуусан сэтгэгдэл нийтэд харагдахгүй, дундаж оноонд ч тооцогдохгүй. Зөвхөн доромжлол, хувийн мэдээлэл, спамыг нууна уу.</p>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script src="../assets/config.js"></script>
+<script src="../assets/api.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), { esc, date } = UE;
+  let slug = "", key = "", rows = [];
+  let tT; const toast = m => { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(tT); tT = setTimeout(() => t.classList.remove("on"), 2200); };
+  $("place").innerHTML = Object.entries(window.UE_PLACES || {}).map(([s, p]) => `<option value="${esc(s)}">${esc(p.name)}</option>`).join("");
+
+  function render() {
+    const vis = rows.filter(r => !r.hidden).length, unreplied = rows.filter(r => !r.reply && !r.hidden).length;
+    $("stat").textContent = `${rows.length} сэтгэгдэл · ${unreplied} хариулаагүй` + (rows.length - vis ? ` · ${rows.length - vis} нуусан` : "");
+    $("list").innerHTML = rows.length ? rows.map(r => `<div class="card${r.hidden ? " hid" : ""}" data-id="${r.id}">
+      <div class="rh"><span class="w">${esc(r.author || "Зочин")}<small>${date(r.created_at)}${r.hidden ? " · нуусан" : ""}</small></span><span class="st">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span></div>
+      ${r.body ? `<p style="white-space:pre-line;overflow-wrap:anywhere">${esc(r.body)}</p>` : ""}
+      ${r.tags && r.tags.length ? `<div class="tags">${r.tags.map(t => `<span class="tg">${esc(t)}</span>`).join("")}</div>` : ""}
+      <label class="f">Таны хариу<textarea class="inp" maxlength="1000" style="min-height:80px" placeholder="Зочинд баярлалаа гэх, асуудлыг хэрхэн засахаа хэлэх…">${esc(r.reply || "")}</textarea></label>
+      <div class="row2"><button class="btn" data-act="reply">Хариу хадгалах</button><button class="btn ghost" data-act="hide">${r.hidden ? "Буцааж харуулах" : "Нуух"}</button></div>
+    </div>`).join("") : `<p class="empty">Одоогоор сэтгэгдэл алга.</p>`;
+  }
+  async function load() { rows = await UE.rpc("ue_owner_reviews", { p_place: slug, p_key: key }); render(); }
+
+  $("login").onsubmit = async e => {
+    e.preventDefault(); $("lerr").textContent = "";
+    if (!UE.ready) return $("lerr").textContent = "Сервер хараахан холбогдоогүй байна.";
+    slug = $("place").value; key = $("key").value;
+    try { await load(); $("login").hidden = true; $("panel").hidden = false; }
+    catch (err) { $("lerr").textContent = err.code === "owner" ? "Түлхүүр буруу байна." : "Холбогдож чадсангүй. Дахин оролдоно уу."; }
+  };
+  $("out").onclick = () => { key = ""; rows = []; $("key").value = ""; $("panel").hidden = true; $("login").hidden = false; };
+  $("list").addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const card = b.closest("[data-id]"), id = +card.dataset.id, r = rows.find(x => x.id === id);
+    b.disabled = true;
+    try {
+      if (b.dataset.act === "reply") { await UE.rpc("ue_owner_reply", { p_place: slug, p_key: key, p_id: id, p_reply: card.querySelector("textarea").value }); toast("Хариу хадгалагдлаа"); }
+      else { await UE.rpc("ue_owner_hide", { p_place: slug, p_key: key, p_id: id, p_hidden: !r.hidden }); toast(r.hidden ? "Буцааж харуулсан" : "Нуусан"); }
+      await load();
+    } catch (err) { toast("Хадгалж чадсангүй"); b.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>
