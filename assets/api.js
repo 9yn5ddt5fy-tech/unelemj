@@ -47,6 +47,9 @@ window.UE = (() => {
     get(k) { try { return JSON.parse(localStorage.getItem("ue-" + k) || "[]"); } catch (e) { return []; } },
     set(k, v) { try { localStorage.setItem("ue-" + k, JSON.stringify(v)); } catch (e) {} },
     add(k, item) { const l = mine.get(k).filter(x => (x.s || x) !== (item.s || item)); l.unshift(item); mine.set(k, l.slice(0, 200)); },
+    // names of Google places this device saved or reviewed, so "Би" can list them without asking Google again
+    name(k, n, c) { try { const m = JSON.parse(localStorage.getItem("ue-names") || "{}"); m[k] = { n, c }; localStorage.setItem("ue-names", JSON.stringify(m)); } catch (e) {} },
+    names() { try { return JSON.parse(localStorage.getItem("ue-names") || "{}"); } catch (e) { return {}; } },
     toggle(k, s) { const l = mine.get(k); const has = l.includes(s); mine.set(k, has ? l.filter(x => x !== s) : [s, ...l]); return !has; }
   };
   return { ready, rpc, device, esc, date, CATS, mine };

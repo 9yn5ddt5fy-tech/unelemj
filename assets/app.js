@@ -10,7 +10,8 @@
   let loaded = false, scat = "", stag = "", lbCat = "", region = "";
   try { region = localStorage.getItem("ue-region") || ""; } catch (e) {}
 
-  const img = p => (p.photos && p.photos[0] ? `${p.s}/${p.photos[0]}` : "");
+  const img = p => (p.g ? p.photo || "" : p.photos && p.photos[0] ? `${p.s}/${p.photos[0]}` : "");
+  const href = p => (p.g ? `p/?g=${encodeURIComponent(p.g)}` : `${p.s}/`);
   const icon = c => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${CATS[c] || CATS["Дэлгүүр"]}"/></svg>`;
   const st = p => stats[p.s] || {};
   const fmt = n => (n ? Number(n).toFixed(1) : "–");
@@ -24,10 +25,10 @@
 
   // ---------- pieces
   const bigCard = p => { const r = rankIn(p);
-    return `<a class="bc" href="${esc(p.s)}/"><span class="im">${img(p) ? `<img src="${esc(img(p))}" alt="" loading="lazy">` : `<span class="ph">${icon(p.category)}</span>`}
+    return `<a class="bc" href="${esc(href(p))}"><span class="im">${img(p) ? `<img src="${esc(img(p))}" alt="" loading="lazy">` : `<span class="ph">${icon(p.category)}</span>`}
       ${r ? `<span class="badge${r === 1 ? " no1" : ""}">#${r} ${esc(p.category)}</span>` : ""}</span>
       <span class="dot">${esc(p.category)}</span><b>${esc(p.name)}</b><span class="ln">${rateLine(p)} · ${esc(p.location || "")}</span></a>`; };
-  const rowCard = (p, n) => `<a class="card pc" href="${esc(p.s)}/"><span>${n ? `<span class="rk num">#${n}</span>` : `<span class="dot">${esc(p.category)}</span>`}<b>${esc(p.name)}</b>
+  const rowCard = (p, n) => `<a class="card pc" href="${esc(href(p))}"><span>${n ? `<span class="rk num">#${n}</span>` : `<span class="dot">${esc(p.category)}</span>`}<b>${esc(p.name)}</b>
       <span class="ln">${rateLine(p)}</span><span class="ln">${esc([p.location, p.region].filter(Boolean).join(" · "))}</span></span>
       ${img(p) ? `<img src="${esc(img(p))}" alt="" loading="lazy">` : `<span class="ph">${icon(p.category)}</span>`}</a>`;
   const empty = t => `<div class="card"><p class="empty">${t}</p></div>`;
@@ -56,7 +57,7 @@
       ${themes.length ? sec("Сэдвээр", "Зочдын хамгийн их онцолсон зүйлсээр", "", `<div class="tags">${themes.map(([t, n]) => `<a class="tg" href="#search" data-tag="${esc(t)}">${esc(t)} <b class="num">${n}</b></a>`).join("")}</div>`) : ""}
       ${sec("Сүүлийн сэтгэгдлүүд", "", "", recent.length ? `<div class="revs feed">${recent.slice(0, 6).map(({ r, p }) => { const nm = r.author || "Зочин";
         return `<div class="rv"><div class="who"><span class="av">${esc(nm[0])}</span><span><b>${esc(nm)}</b><small>${date(r.created_at)}</small></span></div>
-        <a class="card" href="${esc(p.s)}/"><span class="t"><span class="dot">${esc(p.name)}</span><span class="st">${stars(r.rating)}</span><p>${esc(r.body)}</p></span>${img(p) ? `<img src="${esc(img(p))}" alt="" loading="lazy">` : ""}</a></div>`; }).join("")}</div>` : empty(loaded ? "Сэтгэгдэл одоогоор алга." : "Ачааллаж байна…"))}`;
+        <a class="card" href="${esc(href(p))}"><span class="t"><span class="dot">${esc(p.name)}</span><span class="st">${stars(r.rating)}</span><p>${esc(r.body)}</p></span>${img(p) ? `<img src="${esc(img(p))}" alt="" loading="lazy">` : ""}</a></div>`; }).join("")}</div>` : empty(loaded ? "Сэтгэгдэл одоогоор алга." : "Ачааллаж байна…"))}`;
     const rs = $("region"); if (rs) rs.onchange = () => { region = rs.value; try { localStorage.setItem("ue-region", region); } catch (e) {} home(); };
   }
 
@@ -70,7 +71,27 @@
     const sorted = ranked(l).concat(l.filter(p => !st(p).count));
     $("sres").innerHTML = `<p class="cnt">${sorted.length} газар</p><div class="revs">${sorted.map(p => rowCard(p)).join("")}</div>
       ${!sorted.length ? empty(`“${esc(raw || scat || stag)}” Үнэлэмжид одоогоор алга.`) : ""}
-      ${q.length >= 2 ? `<div class="card soon"><b>Google-ээс хайх удахгүй</b><p>Удахгүй энд Google Maps-ийн газрууд шууд гарч ирнэ. Хэн ч газар гараар нэмэх шаардлагагүй болно.</p></div>` : ""}`;
+      <div id="gres"></div>`;
+    gsearch(raw);
+  }
+  let gT, gQ = "";
+  function gsearch(raw) {
+    clearTimeout(gT);
+    const box = $("gres"); if (!box) return;
+    if (raw.length < 2) { box.innerHTML = ""; return; }
+    if (!window.UEG || !UEG.ready) { box.innerHTML = `<div class="card soon"><b>Google-ээс хайх удахгүй</b><p>Удахгүй энд Google Maps-ийн газрууд шууд гарч ирнэ.</p></div>`; return; }
+    box.innerHTML = `<p class="cnt">Google Maps-ээс хайж байна…</p>`;
+    gT = setTimeout(async () => {
+      gQ = raw;
+      try {
+        const have = new Set(PL.map(p => p.g).filter(Boolean));
+        const res = (await UEG.search(raw)).filter(r => !have.has(r.id) && (!scat || r.category === scat));
+        if (gQ !== raw || !$("gres")) return;
+        $("gres").innerHTML = res.length ? `<p class="cnt">Google Maps-ээс · ${res.length} газар</p><div class="revs">${res.map(r => `<a class="card pc" href="p/?g=${encodeURIComponent(r.id)}">
+          <span><span class="dot">${esc(r.category)}</span><b>${esc(r.name)}</b><span class="ln">${esc(r.address)}</span><span class="ln gtag">Анхны үнэлгээг та өгөөрэй</span></span><span class="ph">${icon(r.category)}</span></a>`).join("")}</div>
+          <p class="gattr">Хайлтын үр дүн: Google Maps</p>` : `<p class="cnt">Google Maps-ээс олдсонгүй.</p>`;
+      } catch (e) { if ($("gres")) $("gres").innerHTML = `<p class="cnt">Google-ээс хайж чадсангүй. Дахин оролдоно уу.</p>`; }
+    }, 450);
   }
 
   // ---------- Шилдэг
@@ -87,14 +108,15 @@
   function me() {
     const rv = mine.get("reviewed"), sv = mine.get("saved");
     let name = ""; try { name = localStorage.getItem("ue-name") || ""; } catch (e) {}
-    const by = s => PL.find(p => p.s === s);
+    const names = mine.names();
+    const by = k => PL.find(p => p.s === k || "g:" + p.g === k) || (k.startsWith("g:") ? { s: k, g: k.slice(2), name: (names[k] || {}).n || "Google-ийн газар", category: (names[k] || {}).c || "Бусад" } : null);
     const cats = new Set(rv.map(x => (by(x.s) || {}).category).filter(Boolean));
     const badges = [["Анхны алхам", "1 үнэлгээ", "1", rv.length >= 1], ["Идэвхтэн", "5 үнэлгээ", "5", rv.length >= 5], ["Шүүмжлэгч", "20 үнэлгээ", "20", rv.length >= 20], ["Олон талт", "3 ангилалд", "3", cats.size >= 3]];
     $("v-me").innerHTML = `<div class="ttl"><h1>${esc(name || "Би")}</h1><p>Энэ төхөөрөмж дээр хийсэн зүйлс. Бүртгэл удахгүй нэмэгдэнэ.</p></div>
       <div class="card kv"><div><b class="num">${rv.length}</b><span>Үнэлгээ</span></div><div><b class="num">${sv.length}</b><span>Хадгалсан</span></div><div><b class="num">${cats.size}</b><span>Ангилал</span></div></div>
       <section class="sec"><div class="sh"><h2>Тэмдэг</h2></div><div class="badges">${badges.map(([t, d, s, on]) => `<div class="bd${on ? "" : " off"}"><span class="b">${s}</span><b>${t}</b><small>${d}</small></div>`).join("")}</div></section>
       <section class="sec"><div class="sh"><h2>Хадгалсан</h2></div>${sv.length ? `<div class="revs">${sv.map(by).filter(Boolean).map(p => rowCard(p)).join("")}</div>` : empty("Газрын хуудсан дээрх ♡ товчоор хадгална.")}</section>
-      <section class="sec"><div class="sh"><h2>Миний үнэлсэн</h2></div>${rv.length ? `<div class="revs">${rv.map(x => { const p = by(x.s); return p ? `<a class="card pc" href="${esc(p.s)}/"><span><span class="dot">${esc(p.category)}</span><b>${esc(p.name)}</b><span class="ln"><span class="st">${stars(x.r)}</span> · ${esc(x.d)}</span></span>${img(p) ? `<img src="${esc(img(p))}" alt="">` : ""}</a>` : ""; }).join("")}</div>` : empty("Та одоогоор үнэлгээ өгөөгүй байна.")}</section>
+      <section class="sec"><div class="sh"><h2>Миний үнэлсэн</h2></div>${rv.length ? `<div class="revs">${rv.map(x => { const p = by(x.s) || (x.s.startsWith("g:") ? { s: x.s, g: x.s.slice(2), name: x.n || "Google-ийн газар", category: x.c || "Бусад" } : null); return p ? `<a class="card pc" href="${esc(href(p))}"><span><span class="dot">${esc(p.category)}</span><b>${esc(p.name)}</b><span class="ln"><span class="st">${stars(x.r)}</span> · ${esc(x.d)}</span></span>${img(p) ? `<img src="${esc(img(p))}" alt="">` : ""}</a>` : ""; }).join("")}</div>` : empty("Та одоогоор үнэлгээ өгөөгүй байна.")}</section>
       <a class="card adcard" href="#biz"><span><span class="label">Бизнес эрхэлдэг үү?</span><b>Байгууллагын хэсэг</b></span><span class="arrow">→</span></a>`;
   }
 
@@ -134,11 +156,23 @@
 
   // ---------- data
   if (!UE.ready) return;
-  Promise.all(PL.map(async p => {
+  (async () => {
     try {
-      stats[p.s] = await UE.rpc("ue_place", { p_place: p.s }) || {};
+      const rows = await UE.rpc("ue_places");
+      const gs = [];
+      rows.forEach(r => {
+        stats[r.slug] = { count: +r.count, avg: r.avg == null ? null : +r.avg, tags: r.tags || {} };
+        if (r.google_id && +r.count && !PL.some(p => p.s === r.slug)) gs.push({ s: r.slug, g: r.google_id, name: "", category: r.category, location: "", region: "" });
+      });
+      if (window.UEG && UEG.ready) await Promise.all(gs.slice(0, 24).map(async p => {
+        try { const d = await UEG.details(p.g); p.name = d.name; p.location = d.address; p.photo = (d.photos[0] || {}).url || ""; PL.push(p); } catch (e) {}
+      }));
+    } catch (e) {}
+  })().then(() => Promise.all(PL.map(async p => {
+    try {
+      if (!stats[p.s]) stats[p.s] = await UE.rpc("ue_place", { p_place: p.s }) || {};
       const rows = await UE.rpc("ue_reviews", { p_place: p.s, p_limit: 6 });
       rows.filter(r => r.body).forEach(r => recent.push({ r, p }));
     } catch (e) {}
-  })).then(() => { recent.sort((a, b) => b.r.created_at.localeCompare(a.r.created_at)); loaded = true; route(); });
+  }))).then(() => { recent.sort((a, b) => b.r.created_at.localeCompare(a.r.created_at)); loaded = true; route(); });
 })();

@@ -1,7 +1,11 @@
 // Үнэлэмж · one place page: summary, reviews, and the step-by-step review form
 (() => {
-  const slug = document.body.dataset.place;
-  const info = (window.UE_PLACES || {})[slug] || {};
+  const isG = document.body.dataset.place === "google";
+  const gid = isG ? new URLSearchParams(location.search).get("g") || "" : "";
+  let slug = isG ? "" : document.body.dataset.place;
+  let info = isG ? {} : (window.UE_PLACES || {})[slug] || {};
+  const saveKey = () => (isG ? "g:" + gid : slug);
+  const DEFAULT_TAGS = ["Найрсаг ажилтан", "Цэвэрхэн", "Амттай хоол", "Үзэмж сайхан", "Тухтай", "Үнэ боломжийн", "Хүүхдэд тохиромжтой", "Чимээгүй", "Удаан хүлээлгэдэг", "Үнэтэй", "Цэвэрлэгээ дутуу", "Ус, цахилгаан тасалдсан"];
   const { esc, date } = UE;
   const $ = id => document.getElementById(id);
   const NEG = ["Удаан хүлээлгэдэг", "Үнэтэй", "Цэвэрлэгээ дутуу", "Ус, цахилгаан тасалдсан"];
@@ -16,8 +20,9 @@
     document.title = (info.name || slug) + " · Үнэлэмж";
     const ph = info.photos || [];
     if (ph[0]) $("herobg").style.backgroundImage = `url("${ph[0].replace(/"/g, "")}")`;
-    $("gal").innerHTML = ph.length
-      ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>` : "";
+    $("gal").innerHTML = (ph.length
+      ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>` : "")
+      + (isG ? `<p class="gattr">Мэдээлэл, зураг: <b>Google Maps</b>${(info.by || []).length ? " · Зураг: " + info.by.map(a => a.uri && /^https:/.test(a.uri) ? `<a href="${esc(a.uri)}" target="_blank" rel="noopener">${esc(a.name)}</a>` : esc(a.name)).join(", ") : ""}${info.mapsUri && /^https:/.test(info.mapsUri) ? ` · <a href="${esc(info.mapsUri)}" target="_blank" rel="noopener">Google Maps-д нээх</a>` : ""}</p>` : "");
     $("cat").textContent = info.category || "";
     $("name").textContent = info.name || slug;
     $("sub").textContent = info.location || "";
@@ -39,8 +44,12 @@
   // ---- summary + reviews from the server
   async function loadSummary() {
     place = await UE.rpc("ue_place", { p_place: slug });
-    if (!place) { $("sum").innerHTML = `<p class="empty">Энэ газар бүртгэлгүй байна.</p>`; $("open").disabled = true; return; }
-    allowed = place.allowed_tags || [];
+    if (!place) {
+      allowed = DEFAULT_TAGS;
+      if (isG) { $("sum").innerHTML = `<p class="empty">Одоогоор үнэлгээ алга. Анхны үнэлгээг та өгөөрэй.</p>`; $("tagblk").hidden = true; return; }
+      $("sum").innerHTML = `<p class="empty">Энэ газар бүртгэлгүй байна.</p>`; $("open").disabled = true; return;
+    }
+    allowed = place.allowed_tags || DEFAULT_TAGS;
     const n = place.count || 0;
     if (!n) {
       $("sum").innerHTML = `<p class="empty">Одоогоор үнэлгээ алга. Анхны үнэлгээг та өгөөрэй.</p>`;
@@ -116,9 +125,10 @@
     if ($("fhp") && $("fhp").value) { F.step = 4; return render(); } // bot trap
     nx.disabled = true; nx.textContent = "Илгээж байна…";
     try {
+      if (isG && !place) await UE.rpc("ue_ensure_google_place", { p_google_id: gid, p_category: info.category || "" });
       await UE.rpc("ue_submit", { p_place: slug, p_device: UE.device(), p_rating: F.r, p_service: F.s || null, p_clean: F.c || null, p_value: F.v || null, p_tags: F.tags, p_body: F.t.trim(), p_author: F.name.trim() });
       try { if (F.name.trim()) localStorage.setItem("ue-name", F.name.trim()); } catch (e) {}
-      UE.mine.add("reviewed", { s: slug, r: F.r, d: new Date().toISOString().slice(0, 10) });
+      UE.mine.add("reviewed", { s: saveKey(), n: info.name || "", c: info.category || "", r: F.r, d: new Date().toISOString().slice(0, 10) });
       F.step = 4; render(); last = null; load();
     } catch (e) {
       const m = { too_soon: "Та энэ газарт өнөөдөр аль хэдийн үнэлгээ өгсөн байна. Маргааш дахин оролдоно уу.", too_many: "Энэ сүлжээнээс өнөөдөр хэт олон үнэлгээ ирсэн байна. Маргааш дахин оролдоно уу." }[e.code];
@@ -139,9 +149,19 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheet.hidden) closeForm(); });
 
   const sv = $("save");
-  const paintSave = () => { const on = UE.mine.get("saved").includes(slug); sv.classList.toggle("on", on); sv.textContent = on ? "♥" : "♡"; sv.setAttribute("aria-label", on ? "Хадгалснаас хасах" : "Хадгалах"); };
-  sv.onclick = () => { const on = UE.mine.toggle("saved", slug); paintSave(); toast(on ? "Хадгаллаа" : "Хадгалснаас хаслаа"); };
-  paintSave();
-  renderHead(); load();
-  if (location.hash === "#review") setTimeout(() => { if (!$("open").disabled) openForm(); }, 600);
+  const paintSave = () => { const on = UE.mine.get("saved").includes(saveKey()); sv.classList.toggle("on", on); sv.textContent = on ? "♥" : "♡"; sv.setAttribute("aria-label", on ? "Хадгалснаас хасах" : "Хадгалах"); };
+  sv.onclick = () => { const on = UE.mine.toggle("saved", saveKey()); if (isG) UE.mine.name(saveKey(), info.name, info.category); paintSave(); toast(on ? "Хадгаллаа" : "Хадгалснаас хаслаа"); };
+  async function start() {
+    if (isG) {
+      if (!gid || !window.UEG || !UEG.ready) { $("name").textContent = "Газар олдсонгүй"; $("sum").innerHTML = `<p class="empty">Энэ холбоос буруу байна.</p>`; $("open").disabled = true; return; }
+      try {
+        slug = await UEG.slug(gid);
+        const d = await UEG.details(gid);
+        info = { name: d.name, category: d.category, location: d.address, photos: d.photos.map(p => p.url), by: d.photos.flatMap(p => p.by).filter((a, i, l) => l.findIndex(b => b.name === a.name) === i), mapsUri: d.mapsUri };
+      } catch (e) { $("name").textContent = "Газар олдсонгүй"; $("sum").innerHTML = `<p class="empty">Google-ээс мэдээлэл авч чадсангүй. Дахин оролдоно уу.</p>`; $("open").disabled = true; return; }
+    }
+    paintSave(); renderHead(); await load();
+    if (location.hash === "#review" && !$("open").disabled) openForm();
+  }
+  start();
 })();

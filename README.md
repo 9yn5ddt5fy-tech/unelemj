@@ -37,3 +37,15 @@
 
 Гурван зүйлийг шинэ эзэмшигч рүү шилжүүлнэ: энэ GitHub репо, Supabase төсөл (Project Settings → Transfer),
 домэйн. GRIT-тэй ямар ч холбоогүй.
+
+## Google-ээс хайх
+
+1. Supabase SQL Editor дээр `supabase/002_google_places.sql`-ийг ажиллуулна.
+2. Google Cloud дээр **Places API (New)**-г идэвхжүүлж, API түлхүүр үүсгэнэ. Түлхүүрийг заавал хязгаарлана:
+   - Application restrictions → **Websites**: `https://9yn5ddt5fy-tech.github.io/*` (дараа нь өөрийн домэйн)
+   - API restrictions → зөвхөн **Places API (New)**
+   - Quotas хэсэгт өдрийн дээд хязгаар тавина.
+3. Түлхүүрийг `assets/config.js` доторх `UE_GOOGLE.key`-д бичнэ.
+
+Google-ийн дүрмээр зөвхөн газрын ID-г хадгална. Нэр, хаяг, зургийг хуудас нээгдэх бүрт Google-ээс уншиж, «Google Maps» гэж эх сурвалжийг нь заана.
+Google-ийн газар анхны үнэлгээгээ авахад өгөгдлийн санд үүснэ (хаяг нь `/p/?g=<Google place ID>`).

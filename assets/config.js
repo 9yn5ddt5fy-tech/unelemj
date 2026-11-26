@@ -6,6 +6,9 @@ window.UE_API = {
   key: "sb_publishable_R6WspnTxGfrvtQ694IF0XA_hyErBl3e"
 };
 
+// Google Places (New) browser key: restricted to this site's address and to Places API (New)
+window.UE_GOOGLE = { key: "" };
+
 // What each place page shows besides the reviews. Photos live next to the page
 // (e.g. usukh-ugii/photos/1.jpg). Only use photos the place owns.
 window.UE_PLACES = {
