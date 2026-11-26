@@ -36,12 +36,21 @@
 
   // ---------- Нүүр
   function home() {
-    const top = ranked(PL)[0] || PL[0];
-    if (top && img(top)) $("herobg").style.backgroundImage = `url("${img(top).replace(/"/g, "")}")`;
-    const d = top ? st(top) : {};
-    $("hero-in").innerHTML = top ? `<span class="label">Онцлох · ${esc(top.category)}</span><h1>${esc(top.name)}</h1><p class="sub">${esc([top.location, top.region].filter(Boolean).join(" · "))}</p>
-      <div class="chips">${d.count ? `<span class="chip"><span class="st">★</span> <b class="num">${fmt(d.avg)}</b> · ${d.count} үнэлгээ</span>` : ""}${top.since ? `<span class="chip">${esc(top.since)} оноос</span>` : ""}</div>
-      <a class="btn" href="${esc(top.s)}/">Үзэх, үнэлгээ өгөх</a>` : `<h1>Үнэлэмж</h1><p class="sub">Газар, үйлчилгээний бодит үнэлгээ</p>`;
+    // hero: about Үнэлэмж itself, not about any one place
+    const reviewed = PL.filter(p => st(p).count);
+    const total = reviewed.reduce((a, p) => a + st(p).count, 0);
+    $("hero").classList.add("brand");
+    $("hero-in").innerHTML = `<span class="label">Монгол даяарх газар, үйлчилгээ</span>
+      <h1>Очихоосоо өмнө<br>зочдоос асуу</h1>
+      <p class="sub">Кафе, эмнэлэг, жуулчны бааз, төрийн үйлчилгээ. Хүмүүсийн өөрсдийн бичсэн бодит үнэлгээ.</p>
+      <form class="hsearch" id="hsf" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
+        <input id="hq" type="search" placeholder="Газрын нэр, ангилал, байршил" aria-label="Газар хайх" autocomplete="off"><button type="submit">Хайх</button></form>
+      <div class="chips">${loaded ? `<span class="chip"><b class="num">${reviewed.length}</b>&nbsp;газар</span><span class="chip"><b class="num">${total}</b>&nbsp;үнэлгээ</span>` : ""}<span class="chip">Нэвтрэхгүйгээр үнэлнэ</span></div>`;
+    $("hsf").onsubmit = e => { e.preventDefault(); $("q").value = $("hq").value; scat = ""; stag = ""; location.hash = "#search"; };
+    const top = ranked(PL)[0];
+    const feat = top ? (() => { const d = st(top);
+      return `<a class="feat" href="${esc(href(top))}"><span class="im">${img(top) ? `<img src="${esc(img(top))}" alt="" loading="lazy">` : `<span class="ph">${icon(top.category)}</span>`}</span>
+        <span class="fx"><span class="label">Онцлох · #1 ${esc(top.category)}</span><b>${esc(top.name)}</b><span class="ln"><span class="r"><span class="st">★</span> ${fmt(d.avg)}</span> · ${d.count} үнэлгээ · ${esc(top.location || "")}</span></span></a>`; })() : "";
     const regions = [...new Set(PL.map(p => p.region).filter(Boolean))];
     const near = ranked(PL.filter(p => !region || p.region === region)).concat(PL.filter(p => (!region || p.region === region) && !st(p).count && !p.db));
     const tagCounts = {};
@@ -50,8 +59,9 @@
     $("v-home").innerHTML = `
       <div class="cats">${Object.keys(CATS).map(c => { const n = PL.filter(p => p.category === c && (!p.db || st(p).count)).length;
         return `<a class="cat${n ? "" : " off"}" href="#search" data-cat="${esc(c)}"><i>${icon(c)}</i><span>${esc(c)}</span><small>${n ? n + " газар" : "Удахгүй"}</small></a>`; }).join("")}</div>
+      ${feat}
       <a class="card adcard" href="#biz"><span><span class="label">Үнэлэмжийн зар</span><b>Таны бизнес энд харагдах уу?</b><span class="ln">Газраа үнэгүй бүртгүүлж, зочдын сэтгэгдэлд хариулаарай.</span></span><span class="arrow">→</span></a>
-      ${sec("Шилдэг үнэлгээтэй", "Зочдын үнэлгээгээр", `<a class="more" href="#top">Бүх эрэмбэ</a>`, ranked(PL).length ? `<div class="shelf">${ranked(PL).slice(0, 8).map(bigCard).join("")}</div>` : empty(loaded ? "Одоогоор үнэлгээ алга." : "Ачааллаж байна…"))}
+      ${ranked(PL).length > 1 ? sec("Шилдэг үнэлгээтэй", "Зочдын үнэлгээгээр", `<a class="more" href="#top">Бүх эрэмбэ</a>`, `<div class="shelf">${ranked(PL).slice(1, 9).map(bigCard).join("")}</div>`) : !loaded ? empty("Ачааллаж байна…") : ""}
       ${sec("Ойролцоо", "Аймаг, дүүргээр", regions.length > 1 ? `<select id="region" aria-label="Байршил"><option value="">Бүх газар</option>${regions.map(r => `<option${r === region ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>` : "",
         near.length ? `<div class="shelf">${near.map(bigCard).join("")}</div>` : empty("Энэ байршилд одоогоор газар алга."))}
       ${themes.length ? sec("Сэдвээр", "Зочдын хамгийн их онцолсон зүйлсээр", "", `<div class="tags">${themes.map(([t, n]) => `<a class="tg" href="#search" data-tag="${esc(t)}">${esc(t)} <b class="num">${n}</b></a>`).join("")}</div>`) : ""}
