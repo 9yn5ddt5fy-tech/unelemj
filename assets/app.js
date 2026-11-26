@@ -87,12 +87,12 @@
         res = (await UEO.search(raw)).filter(r => !have.has(r.id) && (!scat || r.category === scat));
       } catch (e) { res = null; }
       if (gQ !== raw || !$("gres")) return;
+      osmRes = res || [];
       $("gres").innerHTML = (res === null ? `<p class="cnt">Газрын зургаас хайж чадсангүй. Дахин оролдоно уу.</p>`
         : res.length ? `<p class="cnt">Газрын зургаас · ${res.length} газар</p><div class="revs">${res.map((r, i) => `<button class="card pc" data-osm="${i}" style="text-align:left;width:100%">
           <span><span class="dot">${esc(r.category)}</span><b>${esc(r.name)}</b><span class="ln">${esc(r.address)}</span><span class="ln gtag">Анхны үнэлгээг та өгөөрэй</span></span><span class="ph">${icon(r.category)}</span></button>`).join("")}</div>
           <p class="gattr">Газрын мэдээлэл: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ийн хувь нэмэр оруулагчид</p>`
         : `<p class="cnt">Газрын зургаас олдсонгүй.</p>`) + addForm(raw);
-      osmRes = res || [];
     }, 450);
   }
   let osmRes = [];
