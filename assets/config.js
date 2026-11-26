@@ -2,8 +2,8 @@
 // The Supabase URL and publishable (anon) key are meant to be public: the
 // browser can only call the ue_* functions, never read the tables directly.
 window.UE_API = {
-  url: "",   // e.g. https://xxxx.supabase.co   (fill in after the project is created)
-  key: ""    // publishable / anon key
+  url: "https://oovdqycdhtvlxjvbldji.supabase.co",
+  key: "sb_publishable_R6WspnTxGfrvtQ694IF0XA_hyErBl3e"
 };
 
 // What each place page shows besides the reviews. Photos live next to the page
