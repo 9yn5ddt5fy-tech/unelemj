@@ -41,7 +41,7 @@
     const total = reviewed.reduce((a, p) => a + st(p).count, 0);
     $("hero").classList.add("brand");
     $("hero-in").innerHTML = `<span class="label">Монгол даяарх газар, үйлчилгээ</span>
-      <h1>Очихоосоо өмнө<br>зочдоос асуу</h1>
+      <h1>Очихоосоо өмнө<br><em>зочдоос</em> асуу</h1>
       <p class="sub">Кафе, эмнэлэг, жуулчны бааз, төрийн үйлчилгээ. Хүмүүсийн өөрсдийн бичсэн бодит үнэлгээ.</p>
       <form class="hsearch" id="hsf" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3a7 7 0 0 1 5.6 11.2l5.1 5.1-1.4 1.4-5.1-5.1A7 7 0 1 1 10 3zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
         <input id="hq" type="search" placeholder="Газрын нэр, ангилал, байршил" aria-label="Газар хайх" autocomplete="off"><button type="submit">Хайх</button></form>

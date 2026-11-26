@@ -22,8 +22,9 @@
     document.title = (info.name || slug) + " · Үнэлэмж";
     const ph = info.photos || [];
     if (ph[0]) $("herobg").style.backgroundImage = `url("${ph[0].replace(/"/g, "")}")`;
-    $("gal").innerHTML = (ph.length
-      ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>` : "")
+    const rest = ph.slice(1); // the first photo is already the big one at the top
+    $("gal").innerHTML = (rest.length
+      ? `<div class="gal${rest.length === 1 ? " one" : ""}">${rest.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 2}" loading="lazy">`).join("")}</div>` : "")
       + (info.osm ? `<p class="gattr">Газрын мэдээлэл: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ийн хувь нэмэр оруулагчид</p>` : "")
       + (isG ? `<p class="gattr">Мэдээлэл, зураг: <b>Google Maps</b>${(info.by || []).length ? " · Зураг: " + info.by.map(a => a.uri && /^https:/.test(a.uri) ? `<a href="${esc(a.uri)}" target="_blank" rel="noopener">${esc(a.name)}</a>` : esc(a.name)).join(", ") : ""}${info.mapsUri && /^https:/.test(info.mapsUri) ? ` · <a href="${esc(info.mapsUri)}" target="_blank" rel="noopener">Google Maps-д нээх</a>` : ""}</p>` : "");
     $("cat").textContent = info.category || "";
