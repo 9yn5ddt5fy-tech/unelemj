@@ -253,3 +253,9 @@ body.withtabs .toast,body.app .toast{bottom:calc(84px + env(safe-area-inset-bott
 .gattr a{color:var(--mute)}
 .gtag{font-size:11px;font-weight:800;color:var(--mute);letter-spacing:.04em}
 .pc .ph{width:96px;height:96px;border-radius:50%;background:var(--bg)}
+.addp summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.addp summary::-webkit-details-marker{display:none}
+.addp summary::after{content:"+";font-weight:900;color:var(--accent);font-size:20px;line-height:1}
+.addp[open] summary::after{content:"–"}
+.addform{display:grid;gap:12px;margin-top:14px}
+button.card{font:inherit;color:inherit;border:0;cursor:pointer}

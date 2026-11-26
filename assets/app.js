@@ -11,7 +11,7 @@
   try { region = localStorage.getItem("ue-region") || ""; } catch (e) {}
 
   const img = p => (p.g ? p.photo || "" : p.photos && p.photos[0] ? `${p.s}/${p.photos[0]}` : "");
-  const href = p => (p.g ? `p/?g=${encodeURIComponent(p.g)}` : `${p.s}/`);
+  const href = p => (p.g ? `p/?g=${encodeURIComponent(p.g)}` : p.db ? `p/?id=${encodeURIComponent(p.s)}` : `${p.s}/`);
   const icon = c => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${CATS[c] || CATS["Дэлгүүр"]}"/></svg>`;
   const st = p => stats[p.s] || {};
   const fmt = n => (n ? Number(n).toFixed(1) : "–");
@@ -69,17 +69,56 @@
     const l = PL.filter(p => (!scat || p.category === scat) && (!stag || (st(p).tags || {})[stag]) &&
       (!q || [p.name, p.category, p.location, p.region, p.about].join(" ").toLowerCase().includes(q)));
     const sorted = ranked(l).concat(l.filter(p => !st(p).count));
-    $("sres").innerHTML = `<p class="cnt">${sorted.length} газар</p><div class="revs">${sorted.map(p => rowCard(p)).join("")}</div>
-      ${!sorted.length ? empty(`“${esc(raw || scat || stag)}” Үнэлэмжид одоогоор алга.`) : ""}
+    $("sres").innerHTML = `<p class="cnt">Үнэлэмжид · ${sorted.length} газар</p><div class="revs">${sorted.map(p => rowCard(p)).join("")}</div>
+      ${!sorted.length && !q ? empty(`“${esc(scat || stag)}” Үнэлэмжид одоогоор алга.`) : ""}
       <div id="gres"></div>`;
     gsearch(raw);
   }
   let gT, gQ = "";
+  // OpenStreetMap search (free). Picking a result creates the place, then opens its page.
+  function osearch(raw) {
+    const box = $("gres");
+    box.innerHTML = `<p class="cnt">Газрын зургаас хайж байна…</p>`;
+    gT = setTimeout(async () => {
+      gQ = raw;
+      let res = [];
+      try {
+        const have = new Set(PL.map(p => p.osm).filter(Boolean));
+        res = (await UEO.search(raw)).filter(r => !have.has(r.id) && (!scat || r.category === scat));
+      } catch (e) { res = null; }
+      if (gQ !== raw || !$("gres")) return;
+      $("gres").innerHTML = (res === null ? `<p class="cnt">Газрын зургаас хайж чадсангүй. Дахин оролдоно уу.</p>`
+        : res.length ? `<p class="cnt">Газрын зургаас · ${res.length} газар</p><div class="revs">${res.map((r, i) => `<button class="card pc" data-osm="${i}" style="text-align:left;width:100%">
+          <span><span class="dot">${esc(r.category)}</span><b>${esc(r.name)}</b><span class="ln">${esc(r.address)}</span><span class="ln gtag">Анхны үнэлгээг та өгөөрэй</span></span><span class="ph">${icon(r.category)}</span></button>`).join("")}</div>
+          <p class="gattr">Газрын мэдээлэл: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ийн хувь нэмэр оруулагчид</p>`
+        : `<p class="cnt">Газрын зургаас олдсонгүй.</p>`) + addForm(raw);
+      osmRes = res || [];
+    }, 450);
+  }
+  let osmRes = [];
+  const addForm = raw => `<details class="card addp"${osmRes.length ? "" : " open"}><summary><b>Хайсан газар олдохгүй байна уу? Өөрөө нэмэх</b></summary>
+    <form id="addf" class="addform"><label class="f">Нэр<input class="inp" id="an" maxlength="80" required value="${esc(raw)}"></label>
+    <label class="f">Ангилал<select class="inp" id="ac">${[...Object.keys(CATS), "Бусад"].map(c => `<option${c === scat ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+    <label class="f">Байршил<input class="inp" id="al" maxlength="120" required placeholder="Жишээ нь: Баянзүрх дүүрэг, 13-р хороолол"></label>
+    <p class="err" id="aerr"></p><button class="btn" type="submit">Нэмээд үнэлэх</button></form></details>`;
+  async function pickOsm(i) {
+    const r = osmRes[i]; if (!r) return;
+    try { const s = await UE.rpc("ue_ensure_osm_place", { p_osm_id: r.id, p_name: r.name, p_category: r.category, p_location: r.address }); location.href = `p/?id=${encodeURIComponent(s)}#review`; }
+    catch (e) { alertMsg("Газрыг нээж чадсангүй. Дахин оролдоно уу."); }
+  }
+  function alertMsg(m) { const t = document.createElement("p"); t.className = "cnt"; t.textContent = m; $("gres").prepend(t); }
+  document.addEventListener("submit", async e => {
+    if (e.target.id !== "addf") return;
+    e.preventDefault();
+    const err = $("aerr"); err.textContent = "";
+    try { const s = await UE.rpc("ue_add_place", { p_name: $("an").value, p_category: $("ac").value, p_location: $("al").value }); location.href = `p/?id=${encodeURIComponent(s)}#review`; }
+    catch (x) { err.textContent = { name: "Нэрээ 2-80 тэмдэгтээр бичнэ үү.", location: "Байршлаа бичнэ үү.", too_many: "Өнөөдөр хэт олон газар нэмсэн байна. Маргааш дахин оролдоно уу." }[x.code] || "Нэмж чадсангүй. Дахин оролдоно уу."; }
+  });
   function gsearch(raw) {
     clearTimeout(gT);
     const box = $("gres"); if (!box) return;
     if (raw.length < 2) { box.innerHTML = ""; return; }
-    if (!window.UEG || !UEG.ready) { box.innerHTML = `<div class="card soon"><b>Google-ээс хайх удахгүй</b><p>Удахгүй энд Google Maps-ийн газрууд шууд гарч ирнэ.</p></div>`; return; }
+    if (!window.UEG || !UEG.ready) return osearch(raw);
     box.innerHTML = `<p class="cnt">Google Maps-ээс хайж байна…</p>`;
     gT = setTimeout(async () => {
       gQ = raw;
@@ -109,14 +148,16 @@
     const rv = mine.get("reviewed"), sv = mine.get("saved");
     let name = ""; try { name = localStorage.getItem("ue-name") || ""; } catch (e) {}
     const names = mine.names();
-    const by = k => PL.find(p => p.s === k || "g:" + p.g === k) || (k.startsWith("g:") ? { s: k, g: k.slice(2), name: (names[k] || {}).n || "Google-ийн газар", category: (names[k] || {}).c || "Бусад" } : null);
+    const by = k => PL.find(p => p.s === k || "g:" + p.g === k || "id:" + p.s === k)
+      || (k.startsWith("g:") ? { s: k, g: k.slice(2), name: (names[k] || {}).n || "Google-ийн газар", category: (names[k] || {}).c || "Бусад" }
+      : k.startsWith("id:") ? { s: k.slice(3), db: true, name: (names[k] || {}).n || "Газар", category: (names[k] || {}).c || "Бусад" } : null);
     const cats = new Set(rv.map(x => (by(x.s) || {}).category).filter(Boolean));
     const badges = [["Анхны алхам", "1 үнэлгээ", "1", rv.length >= 1], ["Идэвхтэн", "5 үнэлгээ", "5", rv.length >= 5], ["Шүүмжлэгч", "20 үнэлгээ", "20", rv.length >= 20], ["Олон талт", "3 ангилалд", "3", cats.size >= 3]];
     $("v-me").innerHTML = `<div class="ttl"><h1>${esc(name || "Би")}</h1><p>Энэ төхөөрөмж дээр хийсэн зүйлс. Бүртгэл удахгүй нэмэгдэнэ.</p></div>
       <div class="card kv"><div><b class="num">${rv.length}</b><span>Үнэлгээ</span></div><div><b class="num">${sv.length}</b><span>Хадгалсан</span></div><div><b class="num">${cats.size}</b><span>Ангилал</span></div></div>
       <section class="sec"><div class="sh"><h2>Тэмдэг</h2></div><div class="badges">${badges.map(([t, d, s, on]) => `<div class="bd${on ? "" : " off"}"><span class="b">${s}</span><b>${t}</b><small>${d}</small></div>`).join("")}</div></section>
       <section class="sec"><div class="sh"><h2>Хадгалсан</h2></div>${sv.length ? `<div class="revs">${sv.map(by).filter(Boolean).map(p => rowCard(p)).join("")}</div>` : empty("Газрын хуудсан дээрх ♡ товчоор хадгална.")}</section>
-      <section class="sec"><div class="sh"><h2>Миний үнэлсэн</h2></div>${rv.length ? `<div class="revs">${rv.map(x => { const p = by(x.s) || (x.s.startsWith("g:") ? { s: x.s, g: x.s.slice(2), name: x.n || "Google-ийн газар", category: x.c || "Бусад" } : null); return p ? `<a class="card pc" href="${esc(href(p))}"><span><span class="dot">${esc(p.category)}</span><b>${esc(p.name)}</b><span class="ln"><span class="st">${stars(x.r)}</span> · ${esc(x.d)}</span></span>${img(p) ? `<img src="${esc(img(p))}" alt="">` : ""}</a>` : ""; }).join("")}</div>` : empty("Та одоогоор үнэлгээ өгөөгүй байна.")}</section>
+      <section class="sec"><div class="sh"><h2>Миний үнэлсэн</h2></div>${rv.length ? `<div class="revs">${rv.map(x => { const p = by(x.s); if (p && x.n && !p.name) p.name = x.n; return p ? `<a class="card pc" href="${esc(href(p))}"><span><span class="dot">${esc(p.category)}</span><b>${esc(p.name)}</b><span class="ln"><span class="st">${stars(x.r)}</span> · ${esc(x.d)}</span></span>${img(p) ? `<img src="${esc(img(p))}" alt="">` : ""}</a>` : ""; }).join("")}</div>` : empty("Та одоогоор үнэлгээ өгөөгүй байна.")}</section>
       <a class="card adcard" href="#biz"><span><span class="label">Бизнес эрхэлдэг үү?</span><b>Байгууллагын хэсэг</b></span><span class="arrow">→</span></a>`;
   }
 
@@ -149,6 +190,7 @@
     const sc = e.target.closest("[data-sc]"); if (sc) { scat = sc.dataset.sc; search(); }
     const sg = e.target.closest("[data-st]"); if (sg) { stag = ""; search(); }
     const lb = e.target.closest("[data-lb]"); if (lb) { lbCat = lb.dataset.lb; top(); }
+    const os = e.target.closest("[data-osm]"); if (os) pickOsm(+os.dataset.osm);
   });
   $("q").addEventListener("input", search);
   window.addEventListener("hashchange", go);
@@ -162,7 +204,9 @@
       const gs = [];
       rows.forEach(r => {
         stats[r.slug] = { count: +r.count, avg: r.avg == null ? null : +r.avg, tags: r.tags || {} };
-        if (r.google_id && +r.count && !PL.some(p => p.s === r.slug)) gs.push({ s: r.slug, g: r.google_id, name: "", category: r.category, location: "", region: "" });
+        if (PL.some(p => p.s === r.slug)) return;
+        if (r.google_id) { if (+r.count) gs.push({ s: r.slug, g: r.google_id, name: "", category: r.category, location: "", region: "" }); }
+        else if (r.name) PL.push({ s: r.slug, db: true, osm: r.osm_id || "", name: r.name, category: r.category, location: r.location || "", region: "" });
       });
       if (window.UEG && UEG.ready) await Promise.all(gs.slice(0, 24).map(async p => {
         try { const d = await UEG.details(p.g); p.name = d.name; p.location = d.address; p.photo = (d.photos[0] || {}).url || ""; PL.push(p); } catch (e) {}

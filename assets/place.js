@@ -1,10 +1,12 @@
 // Үнэлэмж · one place page: summary, reviews, and the step-by-step review form
 (() => {
-  const isG = document.body.dataset.place === "google";
-  const gid = isG ? new URLSearchParams(location.search).get("g") || "" : "";
+  const qs = new URLSearchParams(location.search);
+  const isG = document.body.dataset.place === "google" && !!qs.get("g");
+  const isDb = document.body.dataset.place === "google" && !!qs.get("id");
+  const gid = isG ? qs.get("g") : "";
   let slug = isG ? "" : document.body.dataset.place;
   let info = isG ? {} : (window.UE_PLACES || {})[slug] || {};
-  const saveKey = () => (isG ? "g:" + gid : slug);
+  const saveKey = () => (isG ? "g:" + gid : isDb ? "id:" + slug : slug);
   const DEFAULT_TAGS = ["Найрсаг ажилтан", "Цэвэрхэн", "Амттай хоол", "Үзэмж сайхан", "Тухтай", "Үнэ боломжийн", "Хүүхдэд тохиромжтой", "Чимээгүй", "Удаан хүлээлгэдэг", "Үнэтэй", "Цэвэрлэгээ дутуу", "Ус, цахилгаан тасалдсан"];
   const { esc, date } = UE;
   const $ = id => document.getElementById(id);
@@ -22,6 +24,7 @@
     if (ph[0]) $("herobg").style.backgroundImage = `url("${ph[0].replace(/"/g, "")}")`;
     $("gal").innerHTML = (ph.length
       ? `<div class="gal${ph.length === 1 ? " one" : ""}">${ph.map((p, i) => `<img src="${esc(p)}" alt="${esc(info.name)} · зураг ${i + 1}" loading="${i ? "lazy" : "eager"}">`).join("")}</div>` : "")
+      + (info.osm ? `<p class="gattr">Газрын мэдээлэл: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ийн хувь нэмэр оруулагчид</p>` : "")
       + (isG ? `<p class="gattr">Мэдээлэл, зураг: <b>Google Maps</b>${(info.by || []).length ? " · Зураг: " + info.by.map(a => a.uri && /^https:/.test(a.uri) ? `<a href="${esc(a.uri)}" target="_blank" rel="noopener">${esc(a.name)}</a>` : esc(a.name)).join(", ") : ""}${info.mapsUri && /^https:/.test(info.mapsUri) ? ` · <a href="${esc(info.mapsUri)}" target="_blank" rel="noopener">Google Maps-д нээх</a>` : ""}</p>` : "");
     $("cat").textContent = info.category || "";
     $("name").textContent = info.name || slug;
@@ -150,9 +153,16 @@
 
   const sv = $("save");
   const paintSave = () => { const on = UE.mine.get("saved").includes(saveKey()); sv.classList.toggle("on", on); sv.textContent = on ? "♥" : "♡"; sv.setAttribute("aria-label", on ? "Хадгалснаас хасах" : "Хадгалах"); };
-  sv.onclick = () => { const on = UE.mine.toggle("saved", saveKey()); if (isG) UE.mine.name(saveKey(), info.name, info.category); paintSave(); toast(on ? "Хадгаллаа" : "Хадгалснаас хаслаа"); };
+  sv.onclick = () => { const on = UE.mine.toggle("saved", saveKey()); if (isG || isDb) UE.mine.name(saveKey(), info.name, info.category); paintSave(); toast(on ? "Хадгаллаа" : "Хадгалснаас хаслаа"); };
   async function start() {
-    if (isG) {
+    if (isDb) {
+      slug = qs.get("id");
+      try {
+        const pl = await UE.rpc("ue_place", { p_place: slug });
+        if (!pl) throw new Error("none");
+        info = { name: pl.name, category: pl.category, location: pl.location, osm: /^o-/.test(slug) };
+      } catch (e) { $("name").textContent = "Газар олдсонгүй"; $("sum").innerHTML = `<p class="empty">Энэ холбоос буруу байна.</p>`; $("open").disabled = true; return; }
+    } else if (isG) {
       if (!gid || !window.UEG || !UEG.ready) { $("name").textContent = "Газар олдсонгүй"; $("sum").innerHTML = `<p class="empty">Энэ холбоос буруу байна.</p>`; $("open").disabled = true; return; }
       try {
         slug = await UEG.slug(gid);
