@@ -10,7 +10,7 @@ window.UE_API = {
 // (e.g. usukh-ugii/photos/1.jpg). Only use photos the place owns.
 window.UE_PLACES = {
   "usukh-ugii": {
-    name: "Usukh Ugii",
+    name: "Өсөх Өгий",
     category: "Амралтын газар",
     location: "Өгий нуур",
     about: "",          // 1–3 sentences from the owners
