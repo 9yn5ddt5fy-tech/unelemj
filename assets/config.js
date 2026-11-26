@@ -13,6 +13,7 @@ window.UE_PLACES = {
     name: "Өсөх Өгий",
     category: "Жуулчны бааз",
     location: "Өгий нуур",
+    region: "Архангай",  // aimag or Ulaanbaatar district, used for the "near" filter
     about: "",          // 1–3 sentences from the owners
     since: "2013",      // year opened
     season: "",         // e.g. "6/1 – 9/15"

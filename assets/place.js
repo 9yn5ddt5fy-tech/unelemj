@@ -118,6 +118,7 @@
     try {
       await UE.rpc("ue_submit", { p_place: slug, p_device: UE.device(), p_rating: F.r, p_service: F.s || null, p_clean: F.c || null, p_value: F.v || null, p_tags: F.tags, p_body: F.t.trim(), p_author: F.name.trim() });
       try { if (F.name.trim()) localStorage.setItem("ue-name", F.name.trim()); } catch (e) {}
+      UE.mine.add("reviewed", { s: slug, r: F.r, d: new Date().toISOString().slice(0, 10) });
       F.step = 4; render(); last = null; load();
     } catch (e) {
       const m = { too_soon: "Та энэ газарт өнөөдөр аль хэдийн үнэлгээ өгсөн байна. Маргааш дахин оролдоно уу.", too_many: "Энэ сүлжээнээс өнөөдөр хэт олон үнэлгээ ирсэн байна. Маргааш дахин оролдоно уу." }[e.code];
@@ -137,6 +138,10 @@
   $("more").onclick = () => loadReviews(true).catch(() => toast("Ачааллахад алдаа гарлаа"));
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheet.hidden) closeForm(); });
 
+  const sv = $("save");
+  const paintSave = () => { const on = UE.mine.get("saved").includes(slug); sv.classList.toggle("on", on); sv.textContent = on ? "♥" : "♡"; sv.setAttribute("aria-label", on ? "Хадгалснаас хасах" : "Хадгалах"); };
+  sv.onclick = () => { const on = UE.mine.toggle("saved", slug); paintSave(); toast(on ? "Хадгаллаа" : "Хадгалснаас хаслаа"); };
+  paintSave();
   renderHead(); load();
   if (location.hash === "#review") setTimeout(() => { if (!$("open").disabled) openForm(); }, 600);
 })();
